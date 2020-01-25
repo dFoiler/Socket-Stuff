@@ -15,12 +15,6 @@
 
 int main(int argc, char* argv[])
 {
-	if(argc == 1)
-	{
-		std::cout << "No inputted host." << std::endl;
-		return 1;	
-	}
-	
 	// Declare the structs responsible for storing our address
 	struct addrinfo hints, *res; // p is placeholder
 	
@@ -32,7 +26,18 @@ int main(int argc, char* argv[])
 	// Now for running the connection!
 	int status; // How'd I do chief?
 	// Alright, now we make a fake connection to the service
-	status = getaddrinfo(argv[1], NULL, &hints, &res);
+	if(argc > 1)
+	{
+		std::cout << "Showing IP of " << argv[1] << " . . . " << std::endl;
+		status = getaddrinfo(argv[1], NULL, &hints, &res);
+	}
+	else
+	{
+		std::cout << "Showing my IP . . . " << std::endl;
+		hints.ai_flags = AI_PASSIVE; // Use my IP
+		// Pretend we're going to bind to a port, say 1025
+		status = getaddrinfo(NULL, "1025", &hints, &res);
+	}
 	if(status)
 	{
 		// Dangit, something went wrong.
