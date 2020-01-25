@@ -63,9 +63,9 @@ int main()
 			return 1;
 		}
 		std::cout << "Connected!" << std::endl;
-		char* buf[256];
+		char buf[256];
 		int bytes_recv = recv(newDesc, buf, 255, 0);
-		std::cout << "Received:" << buf << std::endl;
+		std::cout << "RECV: " << buf << std::endl;
 		// And done here
 		close(newDesc);
 	}

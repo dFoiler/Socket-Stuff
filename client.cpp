@@ -28,12 +28,24 @@ int main()
 	// Now, make the socket
 	int sockDesc = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 	// And connect!
-	connect(sockDesc, res->ai_addr, res->ai_addrlen);
-	
+	if(connect(sockDesc, res->ai_addr, res->ai_addrlen) == -1)
+	{
+		std::cout << "I died connecting." << std::endl;
+		return 1;
+	}
+	std::cout << "Connected!" << std::endl;
 	// And let's send something, for kicks
-	char* message = "Hello server!";
-	int bytes_sent = send(sockDesc, message, sizeof(message), 0);
-	
+	while(1)
+	{
+		std::cout << "Tell me what to send." << std::endl;
+		std::string message;
+		std::getline(std::cin, message);
+		char to_send[256];
+		for(int i = 0; i < message.length(); ++i)
+			to_send[i] = message[i];
+		int bytes_sent = send(sockDesc, to_send, sizeof(to_send), 0);
+		std::cout << "SENT: " << message << std::endl;
+	}
 	// And now we're done.
 	close(sockDesc);
 	freeaddrinfo(res);
