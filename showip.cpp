@@ -32,8 +32,8 @@ int main(int argc, char* argv[])
 	// Now for running the connection!
 	int status; // How'd I do chief?
 	// Alright, now we make a fake connection to the service
-	status = getaddrinfo(argv[i], NULL, &hints, &res);
-	if(!status)
+	status = getaddrinfo(argv[1], NULL, &hints, &res);
+	if(status)
 	{
 		// Dangit, something went wrong.
 		std::cout << "I exploded. Here are my dying words: " << status << std::endl;
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 	for(struct addrinfo *p = res; p; p = p->ai_next)
 	{
 		// It's time to get some addresses
-		void* addr; char* ipver;
+		void* addr; std::string ipver;
 		if(p->ai_family == AF_INET) // IPv4 check
 		{
 			// Get the address
@@ -57,11 +57,18 @@ int main(int argc, char* argv[])
 		{
 			// Get the address
 			struct sockaddr_in6* ipv6 = (struct sockaddr_in6*)p->ai_addr;
-			addr = &(ipv4->sin6_addr);
+			addr = &(ipv6->sin6_addr);
 			// Set the version
 			ipver = "IPv6";
 		}
 		
-		// Now use a sweet convenience command to get the job done
+		// Now use a sweet swwet convenience command to get the job done
+		char ipstr[INET6_ADDRSTRLEN]; // Gimme some space
+		inet_ntop(p->ai_family, addr, ipstr, sizeof(ipstr));
+		std::cout << ipver  << " : " << ipstr << std::endl;
 	}
+	
+	// Those darn memory leaks ruin your day
+	freeaddrinfo(res);
+	return 0;
 }
