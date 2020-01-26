@@ -51,7 +51,7 @@ int setup_server(char* port)
 // Return the sockaddr with IPv4 and IP6 support
 void* get_in_addr(struct sockaddr *sa)
 {
-	if(sa->sa_family = AF_INET)
+	if(sa->sa_family == AF_INET)
 		return &(( (struct sockaddr_in*)sa ) -> sin_addr);
 	return &(( (struct sockaddr_in6*)sa ) -> sin6_addr);
 }
