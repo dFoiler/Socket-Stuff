@@ -6,6 +6,7 @@
 #include <netdb.h>
 
 #define PORT "3730"
+#define MAXDATASIZE 256
 
 int main()
 {
@@ -37,12 +38,16 @@ int main()
 	// And let's send something, for kicks
 	while(1)
 	{
-		std::cout << "Tell me what to send." << std::endl;
+		std::cout << "Tell me what to send or type [q] to quit." << std::endl;
 		std::string message;
 		std::getline(std::cin, message);
-		char to_send[256];
-		for(int i = 0; i < message.length(); ++i)
+		char to_send[MAXDATASIZE];
+		int i;
+		for(i = 0; i < message.length() && i < MAXDATASIZE-1; ++i)
 			to_send[i] = message[i];
+		to_send[i] = '\0';
+		if(to_send[0] == '[' && to_send[1] == 'q' && to_send[2] == ']')
+			break;
 		int bytes_sent = send(sockDesc, to_send, sizeof(to_send), 0);
 		std::cout << "SENT: " << message << std::endl;
 	}

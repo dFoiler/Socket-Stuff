@@ -10,6 +10,7 @@
 
 #define PORT "3730"
 #define BACKLOG 20
+#define MAXDATASIZE 256
 
 int main()
 {
@@ -42,6 +43,8 @@ int main()
 		std::cout << "I died binding." << std::endl;
 		return 1;
 	}
+	// We're done with this
+	freeaddrinfo(res);
 	// Listen
 	status = listen(sockDesc, BACKLOG);
 	if(status == -1)
@@ -63,13 +66,28 @@ int main()
 			return 1;
 		}
 		std::cout << "Connected!" << std::endl;
-		char buf[256];
-		int bytes_recv = recv(newDesc, buf, 255, 0);
-		std::cout << "RECV: " << buf << std::endl;
+		// Now open up a new thread
+		if(!fork())
+		{
+			close(sockDesc); // The new thread shouldn't hog the port
+			// Let's sit around reveiving for a while
+			char buf[MAXDATASIZE];
+			while(1)
+			{
+				int bytes_recv = recv(newDesc, buf, MAXDATASIZE-1, 0);
+				if(bytes_recv == 0) // Is the connection dead?
+					break;
+				// Now output
+				buf[bytes_recv] = '\0';
+				std::cout << "RECV: " << buf << std::endl;
+			}
+			// We're done here
+			close(newDesc);
+			return 0;
+		}
 		// And done here
 		close(newDesc);
 	}
 	// Be a good programmer and return safely
-	freeaddrinfo(res);
 	return 0;
 }
