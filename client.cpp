@@ -2,6 +2,7 @@
 #include <cstdlib>	// std::exit
 #include <string.h>	// memset, std::string, etc.
 #include <unistd.h>	// close
+#include <errno.h>	// errno
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -9,28 +10,32 @@
 #define DEFAULT_PORT "3730"
 #define MAXDATASIZE 256
 
-int setup_client(char* port)
+int setup_client(char* ip, char* port)
 {
 	// Your usual setup
 	struct addrinfo hints, *res; // Stuff we need
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC; // IPv4 or IPv6
 	hints.ai_socktype = SOCK_STREAM; // TCP for life
-	hints.ai_flags = AI_PASSIVE; // I'll be connecting on my machine
 	
 	// So what's the diagnosis?
-	if(getaddrinfo(NULL, port, &hints, &res))
+	if(getaddrinfo(ip, port, &hints, &res))
 	{
-		std::cout << "I died setting up a socket." << std::endl;
+		std::cout << "socket setup error: " << strerror(errno) << std::endl;
 		std::exit(1);
 	}
 	
 	// Now, make the socket
 	int sock_desc = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+	if(sock_desc == -1)
+	{
+		std::cout << "socket make error: " << strerror(errno) << std::endl;
+		std::exit(1);
+	}
 	// And connect!
 	if(connect(sock_desc, res->ai_addr, res->ai_addrlen) == -1)
 	{
-		std::cout << "I died connecting." << std::endl;
+		std::cout << "connect error: " << strerror(errno) << std::endl;
 		std::exit(1);
 	}
 	freeaddrinfo(res);
@@ -57,12 +62,12 @@ bool run_client(int sock_desc)
 int main(int argc, char* argv[])
 {
 	// Set up the socket stuff
-	if(argc != 2)
+	if(argc != 3)
 	{
-		std::cout << "Usage: [port]" << std::endl;
+		std::cout << "Usage: [node] [port]" << std::endl;
 		return 1;
 	}
-	int sock_desc = setup_client(argv[1]);
+	int sock_desc = setup_client(argv[1], argv[2]);
 	// And that's it!
 	// And let's send something, for kicks
 	std::cout << "Tell me what to send; enter [q] to quit." << std::endl;

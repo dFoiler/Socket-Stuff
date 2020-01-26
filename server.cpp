@@ -26,20 +26,21 @@ int setup_server(char* port)
 	status = getaddrinfo(NULL, port, &hints, &res);
 	if(status)
 	{
-		std::cout << "I died setting up a socket." << std::endl;
+		std::cout << "socket setup error: " << strerror(errno) << std::endl;
 		std::exit(1);
 	}
 	// Feed address information into that socket
 	int sockDesc = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 	if(sockDesc == -1) // Uh oh
 	{
-		std::cout << "I died making a socket." << std::endl;
+		std::cout << "socket make error: " << strerror(errno) << std::endl;
 		std::exit(1);
 	}
 	// Now bind
 	if(bind(sockDesc, res->ai_addr, res->ai_addrlen) == -1)
 	{
-		std::cout << "I died binding." << std::endl;
+		std::cout << "bind error: " << strerror(errno) << std::endl;
+		close(sockDesc); // Won't be needing that anymore
 		std::exit(1);
 	}
 	// Be a good programmer and free up stuff
@@ -88,14 +89,14 @@ int main(int argc, char* argv[])
 	if(argc != 2)
 	{
 		std::cout << "Usage: [port]" << std::endl;
-		return 1;
+		std::exit(1);
 	}
 	int sock_desc = setup_server(argv[1]);
 	// Listen
 	if(listen(sock_desc, BACKLOG) == -1)
 	{
-		std::cout << "I died listening." << std::endl;
-		return 1;
+		std::cout << "listen error: " << strerror(errno) << std::endl;
+		std::exit(1);
 	}
 	std::cout << "Listening . . . " << std::endl;
 	
@@ -108,7 +109,7 @@ int main(int argc, char* argv[])
 		int client_desc = accept(sock_desc, (struct sockaddr*)&client_addr, &addr_size);
 		if(client_desc == -1)
 		{
-			std::cout << "I died accepting." << std::endl;
+			std::cout << "accept error: " << strerror(errno) << std::endl;
 			continue;
 		}
 		std::string addr_str = addr_to_str(&client_addr);
