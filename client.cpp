@@ -18,11 +18,9 @@ int main()
 	hints.ai_flags = AI_PASSIVE; // I'll be connecting on my machine
 	
 	// So what's the diagnosis?
-	int status;
-	status = getaddrinfo(NULL, PORT, &hints, &res);
-	if(status)
+	if(getaddrinfo(NULL, PORT, &hints, &res))
 	{
-		std::cout << "I died." << std::endl;
+		std::cout << "I died setting up a socket." << std::endl;
 		return 1;
 	}
 	
@@ -36,20 +34,19 @@ int main()
 	}
 	std::cout << "Connected!" << std::endl;
 	// And let's send something, for kicks
+	std::cout << "Tell me what to send; enter [q] to quit." << std::endl;
+	std::string message;
 	while(1)
 	{
-		std::cout << "Tell me what to send or type [q] to quit." << std::endl;
-		std::string message;
-		std::getline(std::cin, message);
+		getline(std::cin, message);
 		char to_send[MAXDATASIZE];
 		int i;
 		for(i = 0; i < message.length() && i < MAXDATASIZE-1; ++i)
 			to_send[i] = message[i];
 		to_send[i] = '\0';
-		if(to_send[0] == '[' && to_send[1] == 'q' && to_send[2] == ']')
+		if(to_send[0]=='[' && to_send[1]=='q' && to_send[2]==']' && i==3)
 			break;
-		int bytes_sent = send(sockDesc, to_send, sizeof(to_send), 0);
-		std::cout << "SENT: " << message << std::endl;
+		int bytes_sent = send(sockDesc, to_send, MAXDATASIZE, 0);
 	}
 	// And now we're done.
 	close(sockDesc);
