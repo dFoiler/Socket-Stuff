@@ -1,20 +1,17 @@
 #include <iostream>
-#include <string.h>
+#include <cstdlib>	// std::exit
+#include <string.h>	// memset, std::string, etc.
 #include <unistd.h>	// close
 #include <errno.h>	// errno
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <netinet/in.h>	// IP to string stuff
 #include <arpa/inet.h>	// IP to string stuff
 
-#define PORT "3730"
 #define BACKLOG 20
 #define MAXDATASIZE 256
 
-int setup_server()
+int setup_server(char* port)
 {
 	// Here are the structs that matter
 	struct addrinfo hints, *res;
@@ -26,44 +23,28 @@ int setup_server()
 	
 	int status;
 	// Now we get the information
-	status = getaddrinfo(NULL, PORT, &hints, &res);
+	status = getaddrinfo(NULL, port, &hints, &res);
 	if(status)
 	{
 		std::cout << "I died setting up a socket." << std::endl;
-		return -1;
+		std::exit(1);
 	}
 	// Feed address information into that socket
 	int sockDesc = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 	if(sockDesc == -1) // Uh oh
 	{
 		std::cout << "I died making a socket." << std::endl;
-		return -1;
+		std::exit(1);
 	}
 	// Now bind
 	if(bind(sockDesc, res->ai_addr, res->ai_addrlen) == -1)
 	{
 		std::cout << "I died binding." << std::endl;
-		return -1;
+		std::exit(1);
 	}
 	// Be a good programmer and free up stuff
 	freeaddrinfo(res);
 	return sockDesc;
-}
-
-void run_client(int client_desc)
-{
-	// Let's sit around reveiving for a while
-	char buf[MAXDATASIZE];
-	while(1)
-	{
-		int bytes_recv = recv(client_desc, buf, MAXDATASIZE-1, 0);
-		// Break if the connection is dead
-		if(bytes_recv == 0) break;
-		// Now output
-		std::cout << "RECV: " << buf << std::endl;
-	}
-	// We're done here
-	close(client_desc);
 }
 
 // Return the sockaddr with IPv4 and IP6 support
@@ -86,10 +67,30 @@ std::string addr_to_str(struct sockaddr_storage *client_addr)
 	return std::string(addr_chars);
 }
 
-int main()
+void run_client(int client_desc, struct sockaddr_storage *client_addr)
 {
-	int sock_desc = setup_server();
-	if(sock_desc == -1) return 1;
+	// Let's sit around reveiving for a while
+	char buf[MAXDATASIZE];
+	while(1)
+	{
+		int bytes_recv = recv(client_desc, buf, MAXDATASIZE, 0);
+		// Break if the connection is dead
+		if(bytes_recv == 0) break;
+		// Now output
+		std::cout << addr_to_str(client_addr) << " says: " << buf << std::endl;
+	}
+	// We're done here
+	close(client_desc);
+}
+
+int main(int argc, char* argv[])
+{
+	if(argc != 2)
+	{
+		std::cout << "Usage: [port]" << std::endl;
+		return 1;
+	}
+	int sock_desc = setup_server(argv[1]);
 	// Listen
 	if(listen(sock_desc, BACKLOG) == -1)
 	{
@@ -116,7 +117,7 @@ int main()
 		if(!fork())
 		{
 			close(sock_desc); // The new thread shouldn't hog the port
-			run_client(client_desc);
+			run_client(client_desc, &client_addr);
 			std::cout << "Disconnected from " << addr_str << std::endl;
 			return 0;
 		}
