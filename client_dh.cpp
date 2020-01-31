@@ -7,6 +7,8 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+#include "crypto.cpp"
+
 #define DEFAULT_PORT "3730"
 #define MAXDATASIZE 256
 
@@ -42,6 +44,25 @@ int setup_client(char* ip, char* port)
 	return sock_desc;
 }
 
+long long run_dh(int server_desc)
+{
+	// The prime is sent and then the generator
+	long long p, g;
+	recv(server_desc, &p, sizeof(p), 0);
+	recv(server_desc, &g, sizeof(g), 0);
+	std::cout << "Received prime (" << p << ") and generator (" << g << ")." << std::endl;
+	// Generate what to send next
+	long long b = (long long)(get_rand() % (p-1));
+	long long gb = pow_mod(g, b, p);
+	// Send gb and receive ga
+	send(server_desc, &gb, sizeof(gb), 0);
+	long long ga;
+	recv(server_desc, &ga, sizeof(ga), 0);
+	std::cout << "Send g^b (" << gb << ") and recieved g^a (" << ga << ")." << std::endl;
+	// Return g^(ab)
+	return pow_mod(ga, b, p);
+}
+
 // Runs the client sending program
 // Returns true if to continue going
 bool run_client(int sock_desc)
@@ -70,6 +91,8 @@ int main(int argc, char* argv[])
 	int sock_desc = setup_client(argv[1], argv[2]);
 	// And that's it!
 	// And let's send something, for kicks
+	long long secret = run_dh(sock_desc);
+	std::cout << "Received secret (" << secret << ")." << std::endl;
 	std::cout << "Tell me what to send; enter [q] to quit." << std::endl;
 	bool go;
 	do

@@ -1,4 +1,16 @@
-long long pow_mod(int a, long long power, long long mod)
+#include <fstream>
+
+unsigned long long get_rand()
+{
+	unsigned long long r; size_t size = sizeof(r);
+	// Open up the portal to Narnia
+	std::ifstream urandom("/dev/urandom", std::ios::in | std::ios::binary);
+	// To read char bytes into our long, we do sketchy stuff
+	urandom.read(reinterpret_cast<char*>(&r), size);
+	return r;
+}
+
+long long pow_mod(long long a, long long power, long long mod)
 {
 	long long r = 1;
 	while(power)
@@ -16,20 +28,20 @@ bool is_prime(long long n)
 {
 	if(n < 0) return is_prime(-n);
 	// Test small primes
-	long long toTest[12] = {2, 325, 9375, 28178, 450775, 9780504, 1795265022};
+	long long to_test[12] = {2, 325, 9375, 28178, 450775, 9780504, 1795265022};
 	// Else we begin by throwing out all evens
 	if(!(n & 1)) return false;
 	// Begin MR test
 	long long d = (n-1) >> 1;
 	long long r = 1;
-	while (!(d & 1))
+	while (!(d % 2))
 	{
 		d >>= 1;
 		++r;
 	}
-	for(long long p : toTest)
+	for(int i = 0; i < 7; ++i)
 	{
-		long long x = pow_mod(p, d, n);
+		long long x = pow_mod(to_test[i], d, n);
 		if(x == 1 || x == n-1)
 			continue;
 		bool composite = true;
@@ -50,9 +62,9 @@ bool is_prime(long long n)
 
 long long gen_safe_prime(long long lower)
 {
-	// Start at the next odd
-	long long p = lower + ! (lower&1);
-	while(!is_prime(p) && !is_prime((p-1) >> 1))
-		p += 2;
+	// We automatically need to be 11 mod 12
+	long long p = lower + 11 - (lower % 12);
+	while(!is_prime(p) || !is_prime( (p-1) >> 1 ))
+		p += 12;
 	return p;
 }

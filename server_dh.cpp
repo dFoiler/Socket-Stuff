@@ -8,7 +8,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>	// IP to string stuff
 
-#include "crypto.cpp"
+#include "crypto.cpp"	// My crypto stuff
 
 #define BACKLOG 20
 #define MAXDATASIZE 256
@@ -70,8 +70,33 @@ std::string addr_to_str(struct sockaddr_storage *client_addr)
 	return std::string(addr_chars);
 }
 
+// Runs DH key exchange with a client; assumes client behaves
+long long run_dh(int client_desc, long long lower=10000000)
+{
+	long long p = lower;
+	// Look for safe primes until we hit a 7 mod 8 one
+	while((p = gen_safe_prime(p+1)) % 8 != 7);
+	long long g = 2;
+	// Now transmit both the prime and the generator across
+	send(client_desc, &p, sizeof(&p), 0);
+	send(client_desc, &g, sizeof(&g), 0);
+	std::cout << "Sent prime (" << p << ") and generator (" << g << ")." << std::endl;
+	// Generate what to send next
+	long long a = (long long)(get_rand() % (p-1));
+	long long ga = pow_mod(g, a, p);
+	// Send ga and receive gb
+	send(client_desc, &ga, sizeof(ga), 0);
+	long long gb;
+	recv(client_desc, &gb, sizeof(gb), 0);
+	std::cout << "Sent g^a (" << ga << ") and received g^b (" << gb << ")." << std::endl;
+	// Return g^(ab)
+	return pow_mod(gb, a, p);
+}
+
 void run_client(int client_desc, struct sockaddr_storage *client_addr)
 {
+	long long secret = run_dh(client_desc, get_rand() % (1 << 30));
+	std::cout << addr_to_str(client_addr) << "'s secret: " << secret << std::endl;
 	// Let's sit around reveiving for a while
 	char buf[MAXDATASIZE];
 	while(1)
