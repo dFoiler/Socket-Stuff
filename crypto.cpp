@@ -10,6 +10,24 @@ unsigned long long get_rand()
 	return r;
 }
 
+// Mod inv; returns a^-1 (mod b)
+long long mod_inv(long long a, long long b)
+{
+	int mod = b;
+	// Casual magic box algorithm
+	int x0=0, x1=1, y0=1, y1=0;
+	while(a)
+	{
+		int q = b / a;
+		int a_buf = a; a = b % a; b = a_buf;
+		int y_buf = y0; y0 = y1; y1 = y_buf - q * y1;
+		int x_buf = x0; x0 = x1; x1 = x_buf - q * x1;
+	}
+	// Adjust for sign
+	while(x0 < 0) x0 += mod;
+	return x0;
+}
+
 long long pow_mod(long long a, long long power, long long mod)
 {
 	long long r = 1;
@@ -66,5 +84,13 @@ long long gen_safe_prime(long long lower)
 	long long p = lower + 11 - (lower % 12);
 	while(!is_prime(p) || !is_prime( (p-1) >> 1 ))
 		p += 12;
+	return p;
+}
+
+long long gen_prime(long long lower)
+{
+	long long p = lower + !(lower%2);
+	while(!is_prime(p))
+		p += 2;
 	return p;
 }
