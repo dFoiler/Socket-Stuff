@@ -1,39 +1,43 @@
 #include <gmp.h>
 #include <fstream>	// reading from urandom
 #include <iostream>
+#include <string>	// For easy packing
 
 // Converts a string of bytes to an mpz number
-void str_to_mpz(char* str, int len, mpz_t n)
+void str_to_mpz(const char* str, int len, mpz_t n)
 {
 	// Convert the string to a hex string
-	char hex[len*2+1];
-	for(int i = 0; i < len; ++i)
+	char hex[2*len+1];
+	// Clear
+	for(int i = 0; i < sizeof(hex); ++i)
+		hex[i] = '\0';
+	// Go until null-terminated string
+	for(int i = 0; str[i] != '\0'; ++i)
 	{
 		// Each character in the string stores 2 hex digits
 		char byte = str[i];
 		// Separate out the bytes
-		hex[2*i] = (unsigned int)byte >> 4;
-		hex[2*i+1] = (unsigned int)byte % 16;
+		hex[2*i] = (unsigned char)byte >> 4;
+		hex[2*i+1] = (unsigned char)byte % 16;
 		// Map to hex digits
-		hex[2*i] += hex[2*i] < 10 ? '0' : ('a'-10);
-		hex[2*i+1] += hex[2*i+1] < 10 ? '0' : ('a'-10);
+		hex[2*i] += (unsigned char)hex[2*i] < 10 ? '0' : ('a'-10);
+		hex[2*i+1] += (unsigned char)hex[2*i+1] < 10 ? '0' : ('a'-10);
 	}
-	// Null-terminate manually
+	// Manually null-terminate
 	hex[2*len] = '\0';
 	// Now set
+	std::cout << "str_to_mpz h val: " << hex << " (" << sizeof(hex) << ')' << std::endl;
 	mpz_set_str(n, hex, 16);
 }
 
-// Converts an mpz number to a string
-// Assumes there's enough space in str to store
-void mpz_to_str(mpz_t n, char* str)
+// Converts an mpz number to a char*
+void mpz_to_str(const mpz_t n, char* str)
 {
 	// Throw n into a hex string
-	char hex[2*sizeof(str)+1];
-	// Clear hex
-	for(int i = 0; i < sizeof(hex); ++i)
-		hex[i] = '\0';
-	mpz_get_str(hex, 16, n);
+	std::string hex(mpz_get_str(NULL, 16, n));
+	if(hex.length() % 2)
+		hex = "0" + hex;
+	std::cout << "mpz_to_str h val: " << hex << " (" << sizeof(hex) << ')' << std::endl;
 	// Now work through hex to make a readable string
 	for(int i = 0; i < sizeof(str); ++i)
 	{
@@ -47,8 +51,14 @@ void mpz_to_str(mpz_t n, char* str)
 	}
 }
 
+std::string pack_mpz(const mpz_t n)
+{
+	std::string hex(mpz_get_str(NULL, 16, n));
+	return "";
+}
+
 // Some stupid helper I always seem to need
-std::ostream& operator<<(std::ostream& o, mpz_t z)
+std::ostream& operator<<(std::ostream& o, const mpz_t z)
 {
 	return o << mpz_get_str(NULL, 10, z);
 }
@@ -93,11 +103,11 @@ void setup_rsa(int bits, mpz_t N, mpz_t e, mpz_t d)
 	mpz_mul(N, p, q);
 	mpz_set_ui(e, 65537);
 	// Compute phi slowly
-	mpz_set(phi, p); // p
-	mpz_sub_ui(phi, phi, 1); // p-1
-	mpz_mul(phi, phi, q); // pq-q
-	mpz_sub(phi, phi, p); // pq-q-p
-	mpz_add_ui(phi, phi, 1); // pq-q-p+1
+	mpz_set(phi, p); 		// p
+	mpz_sub_ui(phi, phi, 1);	// p-1
+	mpz_mul(phi, phi, q);		// pq-q
+	mpz_sub(phi, phi, p);		// pq-q-p
+	mpz_add_ui(phi, phi, 1);	// pq-q-p+1
 	// Now here's the secret key
 	mpz_invert(d, e, phi); // e is prime, so we've checked phi already
 	mpz_clears(p, q, phi, NULL);
@@ -105,7 +115,16 @@ void setup_rsa(int bits, mpz_t N, mpz_t e, mpz_t d)
 
 // Assumes that enc makes something smaller than N
 // Otherwise the encryption breaks
-void enc_rsa(char* enc, char* mes, mpz_t N, mpz_t e)
+void enc_rsa(char* enc, const char* mes, int len, const mpz_t N, const mpz_t e)
 {
-	// Convert char* to 
+	// Convert mes to an mpz number
+	mpz_t m; mpz_init(m); str_to_mpz(mes, len, m);
+	std::cout << "Unencrypted: " << m << std::endl;
+	// Encrypt
+	mpz_powm(m, m, e, N);
+	std::cout << "Encrypted: " << m << std::endl;
+	// Throw the message into enc
+	mpz_to_str(m, enc);
+	// Now clear
+	mpz_clear(m);
 }
