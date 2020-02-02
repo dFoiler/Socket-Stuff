@@ -4,15 +4,15 @@
 #include <string>	// For easy packing
 
 // Converts a string of bytes to an mpz number
-void str_to_mpz(const char* str, int len, mpz_t n)
+void str_to_mpz(const std::string str, mpz_t n)
 {
 	// Convert the string to a hex string
-	char hex[2*len+1];
+	char hex[2*str.length()+1];
 	// Clear
 	for(int i = 0; i < sizeof(hex); ++i)
 		hex[i] = '\0';
 	// Go until null-terminated string
-	for(int i = 0; str[i] != '\0'; ++i)
+	for(int i = 0; i < str.length(); ++i)
 	{
 		// Each character in the string stores 2 hex digits
 		char byte = str[i];
@@ -24,22 +24,21 @@ void str_to_mpz(const char* str, int len, mpz_t n)
 		hex[2*i+1] += (unsigned char)hex[2*i+1] < 10 ? '0' : ('a'-10);
 	}
 	// Manually null-terminate
-	hex[2*len] = '\0';
+	hex[2*str.length()] = '\0';
 	// Now set
-	std::cout << "str_to_mpz h val: " << hex << " (" << sizeof(hex) << ')' << std::endl;
 	mpz_set_str(n, hex, 16);
 }
 
 // Converts an mpz number to a char*
-void mpz_to_str(const mpz_t n, char* str)
+std::string mpz_to_str(const mpz_t n)
 {
 	// Throw n into a hex string
 	std::string hex(mpz_get_str(NULL, 16, n));
 	if(hex.length() % 2)
 		hex = "0" + hex;
-	std::cout << "mpz_to_str h val: " << hex << " (" << sizeof(hex) << ')' << std::endl;
 	// Now work through hex to make a readable string
-	for(int i = 0; i < sizeof(str); ++i)
+	std::string r = "";
+	for(int i = 0; i < hex.length()/2; ++i)
 	{
 		// Extract nibbles
 		char hi=hex[2*i], lo=hex[2*i+1];
@@ -47,14 +46,27 @@ void mpz_to_str(const mpz_t n, char* str)
 		lo -= lo <= '9' ? '0' : ('a'-10);
 		hi -= hi <= '9' ? '0' : ('a'-10);
 		// Now throw into str
-		str[i] = 16*hi + lo;
+		r += 16*hi + lo;
 	}
+	return r;
 }
 
-std::string pack_mpz(const mpz_t n)
+std::string pad(const std::string str)
 {
-	std::string hex(mpz_get_str(NULL, 16, n));
-	return "";
+	std::string r(str);
+	char pad = 16 - (r.length() % 16);
+	for(int i = 0; i < pad; ++i)
+		r += pad;
+	return r;
+}
+
+std::string unpad(const std::string str)
+{
+	std::string r = "";
+	char pad = str[str.length()-1];
+	for(int i = 0; i < str.length()-pad; ++i)
+		r += str[i];
+	return r;
 }
 
 // Some stupid helper I always seem to need
@@ -115,16 +127,15 @@ void setup_rsa(int bits, mpz_t N, mpz_t e, mpz_t d)
 
 // Assumes that enc makes something smaller than N
 // Otherwise the encryption breaks
-void enc_rsa(char* enc, const char* mes, int len, const mpz_t N, const mpz_t e)
+std::string enc_rsa(const std::string mes, const mpz_t N, const mpz_t e)
 {
 	// Convert mes to an mpz number
-	mpz_t m; mpz_init(m); str_to_mpz(mes, len, m);
-	std::cout << "Unencrypted: " << m << std::endl;
+	mpz_t m; mpz_init(m); str_to_mpz(mes, m);
 	// Encrypt
 	mpz_powm(m, m, e, N);
-	std::cout << "Encrypted: " << m << std::endl;
 	// Throw the message into enc
-	mpz_to_str(m, enc);
-	// Now clear
+	std::string r = mpz_to_str(m);
+	// Now clear and return
 	mpz_clear(m);
+	return r;
 }
